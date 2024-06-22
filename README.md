@@ -5,10 +5,10 @@
 ### Firmware Server
 
 - [x] **Create server Docker image**
-- [ ] **Set up Raspberry Pi with initial (non-OTA) firmware that reports status**
+- [x] **Set up Raspberry Pi with initial (non-OTA) firmware that reports status**
 - [ ] **Write server software to handle:**
-  - [ ] Monitoring Raspberry Pi statuses
-  - [ ] Managing firmware updates
+  - [ ] Receiving raspi statuses
+  - [ ] Storing and sending firmware
   - [ ] Managing firmware rollbacks
   - [ ] Serving the web portal and APIs
 

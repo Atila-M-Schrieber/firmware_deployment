@@ -37,23 +37,32 @@ led_timer = Timer()
 def blink(_timer):
     led.toggle()
 
-# (Division of 2 so frequency is in Hertz)
-led_timer.init(freq=2 / config.blink_frequency, mode=Timer.PERIODIC, callback=blink)
+led_timer.init(freq=2 * config.blink_frequency, mode=Timer.PERIODIC, callback=blink)
 
 # Ping server for updates
 
 server_timer = Timer()
 
 def ping_server(timer):
-    response = requests.post(
-        config.firmware_url,
-        data = {
-            "firmware": config.firmware,
-            "version": config.version,
-            "uptime": time.time() - start_time,
-        }
-    ).json()
-    process_response(response, timer)
+    try:
+        response = requests.post(
+            f"{config.firmware_url}/status",
+            data = {
+                "firmware": config.firmware,
+                "version": config.version,
+                "id": secrets.id,
+                "uptime": time.time() - start_time,
+            }
+        ).json()
+        print("Pinged server.")
+        process_response(response, timer)
+    except OSError as e:
+        print(f"Ping failed: {e}")
+
+    # Visually show ping
+    led.on()
+    time.sleep(0.05)
+    led.off()
 
 def process_response(response, timer):
     print(response)
@@ -61,7 +70,6 @@ def process_response(response, timer):
 
 # Defined so it can be called again in case update fails
 def init_ping_server(timer):
-    timer.init(freq=config.polling_rate, mode=Timer.PERIODIC, callback=ping_server)
+    timer.init(freq=1/config.polling_rate, mode=Timer.PERIODIC, callback=ping_server)
     
-
-
+init_ping_server(server_timer)
