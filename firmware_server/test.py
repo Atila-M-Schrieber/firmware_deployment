@@ -1,5 +1,5 @@
 import requests
-from json import dumps as jsonify
+import os
 
 # Testing done with requests for black box testing of APIs running in Docker
 # Validation errors are not tested for - Pydantic is responsible server-side
@@ -29,7 +29,7 @@ class EndpointTest:
             if self.expected_response is not None:
                 assert response.json() == self.expected_response, "Bad response"
             result = "passed"
-            error = ""
+            error = None
         except AssertionError as e:
             result = "failed - assert"
             error = str(e)
@@ -37,7 +37,7 @@ class EndpointTest:
             result = "failed - error"
             error = str(e)
         
-        return f"{self.name:<30} ... {result:<15} - {error}"
+        return f"{self.name:<30} ... {result:<15}" + ("" if not error else f" - {error}")
 
 # Example good status request
 good_status = EndpointTest(
@@ -87,6 +87,13 @@ bad_status_id = EndpointTest(
     # "Unknown ID"
 )
 
+with open("../firmware/test-1.0.0/main.py", 'r') as f:
+    main_text = f.read()
+with open("../firmware/test-1.0.0/thing.py", 'r') as f:
+    thing_text = f.read()
+with open("../firmware/test_sig.asc", 'r') as f:
+    sig = f.read()
+
 # Good upload
 good_upload = EndpointTest(
     "Good upload",
@@ -96,32 +103,19 @@ good_upload = EndpointTest(
     {
         "firmware": "test",
         "version": "1.0.0",
-        "shasum": "TODO",
-        "signature": "TODO",
-
     },
     200,
     None,
-    { 'main.py': 'print("Hello World!")' }
-)
-
-# Bad upload - bad shasum
-bad_upload_sha = EndpointTest(
-    "Bad upload shasum",
-    "/upload",
-    "PUT",
-    False,
     {
-        "firmware": "test",
-        "version": "1.0.0",
-        "shasum": "TODO_BAD",
-        "signature": "TODO",
-
-    },
-    422,
-    None, # "Shasum does not match files.",
-    { 'main.py': 'print("Hello World!")' }
+        'main.py': main_text,
+        'thing.py': thing_text,
+        'sig.asc': sig
+    }
 )
+
+# Flips the first char's case after a / in the signature, therefore invalidating it (generated)
+bad_sig = '\n'.join([''.join([ch.swapcase() if (i > 0 and line[i-1] == '/')
+                              else ch for i, ch in enumerate(line)]) for line in sig.split('\n')])
 
 # Bad upload - invalid signature
 bad_upload_sign = EndpointTest(
@@ -132,13 +126,32 @@ bad_upload_sign = EndpointTest(
     {
         "firmware": "test",
         "version": "1.0.0",
-        "shasum": "TODO",
-        "signature": "TODO_BAD",
-
     },
     401,
     None, # "Invalid or unknown signature",
-    { 'main.py': 'print("Hello World!")' }
+    {
+        'main.py': main_text,
+        'thing.py': thing_text,
+        'sig.asc': bad_sig
+    }
+)
+
+# Bad upload - missing signature
+bad_upload_no_sig = EndpointTest(
+    "Bad upload missing signature",
+    "/upload",
+    "PUT",
+    False,
+    {
+        "firmware": "test",
+        "version": "1.0.0",
+    },
+    422,
+    None,
+    {
+        'main.py': 'import thing\nprint("Hello World!")',
+        'thing.py': 'print("Hello Thing!")',
+    }
 )
 
 # Bad upload - no files
@@ -150,9 +163,6 @@ bad_upload_no_files = EndpointTest(
     {
         "firmware": "test",
         "version": "1.0.0",
-        "shasum": "TODO",
-        "signature": "TODO",
-
     },
     400,
     # "No files found"
@@ -163,8 +173,8 @@ tests = [
     good_status_update,
     bad_status_id,
     good_upload,
-    bad_upload_sha,
     bad_upload_sign,
+    bad_upload_no_sig,
     bad_upload_no_files,
     # good_update_order,
     # bad_update_order_sign,

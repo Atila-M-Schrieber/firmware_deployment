@@ -19,9 +19,14 @@ wlan.connect(secrets.wifi['ssid'], secrets.wifi['password'])
 
 # LED on continuously until connection is established
 led.on()
+counter = 0
 while wlan.status() < 3:
-    print(f"Connection not yet established")
-    time.sleep(0.5)
+    if counter == 0:
+        print("Connection not yet established", end='')
+    else:
+        print('.', end='')
+    time.sleep(0.2)
+print()
 
 # This (for the purposes of status reporting)
 # should be replaced with NAT for actual remote deployment

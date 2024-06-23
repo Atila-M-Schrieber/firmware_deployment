@@ -6,9 +6,11 @@
 
 - [x] **Create server Docker image**
 - [x] **Set up Raspberry Pi with initial (non-OTA) firmware that reports status**
-- [ ] **Write server software to handle:**
+- [ ] **Write (server) software to handle:**
   - [x] Receiving raspi statuses
+  - [ ] Script to sign, send files to server
   - [ ] Storing/uploading firmware
+    - Note: pgpy not being compatible with EdCSA wasted a lot of time
   - [ ] Sending firmware
   - [ ] Managing firmware rollbacks
   - [ ] Serving the web portal and APIs
