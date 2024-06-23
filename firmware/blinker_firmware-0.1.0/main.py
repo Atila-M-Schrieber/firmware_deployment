@@ -47,25 +47,27 @@ def ping_server(timer):
     try:
         response = requests.post(
             f"{config.firmware_url}/status",
-            data = {
+            json = {
                 "firmware": config.firmware,
                 "version": config.version,
                 "id": secrets.id,
                 "uptime": time.time() - start_time,
             }
-        ).json()
+        )
         print("Pinged server.")
         process_response(response, timer)
     except OSError as e:
         print(f"Ping failed: {e}")
 
     # Visually show ping
-    led.on()
+    led.toggle()
     time.sleep(0.05)
-    led.off()
+    led.toggle()
+    time.sleep(0.05)
+    led.toggle()
 
 def process_response(response, timer):
-    print(response)
+    print(response.json())
     # if response["update"] == True: stop the timer with timer.deinit() and pull the update (OTA module)
 
 # Defined so it can be called again in case update fails
