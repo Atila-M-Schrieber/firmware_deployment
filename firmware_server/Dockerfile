@@ -25,6 +25,9 @@ bgQCeQ0BANcjuFR/hJ2mK84HOs3Af9Adfs9tQhQTF5pEld45lmUI
 =QZYs
 -----END PGP PUBLIC KEY BLOCK-----"
 
+# Also not the best way to store known ID's, and should be able to add new ID's in a webui
+ENV KNOWN_IDS=-2:-1:example
+
 # This should be changed for a remote deployment
 EXPOSE 8000/tcp
 CMD ["python", "./app.py"]

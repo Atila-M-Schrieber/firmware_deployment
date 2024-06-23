@@ -9,6 +9,7 @@ firmware_directory = os.environ["FIRMWARE_DIRECTORY"]
 trusted_firmware_signers = {
     "John Doe": os.environ["PUBLIC_KEY"]
 }
+known_ids = os.environ["KNOWN_IDS"].split(':')
 
 @app.route('/firmware')
 def hello():
