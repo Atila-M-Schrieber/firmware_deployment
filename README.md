@@ -7,8 +7,9 @@
 - [x] **Create server Docker image**
 - [x] **Set up Raspberry Pi with initial (non-OTA) firmware that reports status**
 - [ ] **Write server software to handle:**
-  - [ ] Receiving raspi statuses
-  - [ ] Storing and sending firmware
+  - [x] Receiving raspi statuses
+  - [ ] Storing firmware
+  - [ ] Sending firmware
   - [ ] Managing firmware rollbacks
   - [ ] Serving the web portal and APIs
 
