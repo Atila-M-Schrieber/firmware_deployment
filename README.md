@@ -8,7 +8,7 @@
 - [x] **Set up Raspberry Pi with initial (non-OTA) firmware that reports status**
 - [ ] **Write server software to handle:**
   - [x] Receiving raspi statuses
-  - [ ] Storing firmware
+  - [ ] Storing/uploading firmware
   - [ ] Sending firmware
   - [ ] Managing firmware rollbacks
   - [ ] Serving the web portal and APIs
@@ -34,7 +34,7 @@
 
 ### Testing and Validation
 
-- [ ] **Test connectivity and basic functionality of Raspberry Pi devices**
+- [x] **Test connectivity and basic functionality of Raspberry Pi devices**
 - [ ] **Test firmware server’s management capabilities**
 - [ ] **Validate web portal functionality**
 - [ ] **Conduct thorough tests for firmware integrity and rollback**
@@ -44,4 +44,4 @@
 - OTA updating inspired by https://github.com/kevinmcaleer/ota
 - Documentation
 - LLMs such as ChatGPT for readme and documentation help
-  - No LLM-generated code was used
+  - No LLM-generated code was used, except occasional testing boilerplate
