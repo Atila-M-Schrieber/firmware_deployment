@@ -23,14 +23,18 @@ def upload(pgp_keys):
 
     firmware_files = {}
 
-    for filename, file_contents in request.files.items():
+    for _filename, file_contents in request.files.items(multi=True):
+        if _filename == 'file':
+            filename = file_contents.filename
+        else:
+            filename = _filename
         if filename in ["sig.pgp", "sig.asc"]:
             file_contents.seek(0)
-            sig_blob = file_contents.read().decode('utf-8')
+            sig_blob = file_contents.stream.read()#.decode('utf-8')
             signature = pgpy.PGPSignature.from_blob(sig_blob)
         else:
             firmware_files[filename] = file_contents
-            if filename.split('.')[1] != "py":
+            if filename.split('.')[-1] != "py":
                 print("Warning, non-python file sent in firmware upload!")
 
     if not signature:
@@ -45,7 +49,6 @@ def upload(pgp_keys):
     # concatenate firmware as "cat /firmware_files/as/a/directory/*" would
     def decode(name):
         file = firmware_files[name]
-        file.seek(0)
         return file.read().decode('utf-8')
 
     cat_files = ''.join(map(decode, sorted_filenames))
