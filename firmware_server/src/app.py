@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 import os
+from pydantic import BaseModel, ValidationError
 
 app = Flask(__name__)
 
@@ -15,21 +16,38 @@ known_ids = os.environ["KNOWN_IDS"].split(':')
 def hello():
 	return "Hello World!"
 
+class Status(BaseModel):
+    firmware: str
+    version: str
+    id: str
+    uptime: int
+
 @app.route('/firmware/status', methods=['POST'])
 def status():
-    try:
-        # Should check for valid format
-        # Should check for known ID
-        data = request.get_json()
-    except:
+    data = request.get_json()
+    if data == None:
         print("Data was not JSON")
         return "Request must be JSON", 400
 
+    try:
+        data = Status.parse_obj(data)
+    except ValidationError as e:
+        print("Data is invalid")
+        return f"JSON format is invalid: {e}", 400
+
+    if not data.id in known_ids:
+        return f"Unknown ID: {data.id}", 401
+    
+
     print(data)
 
-    no_update = {
-        "update": False
-    }
+    no_update = { "update": False }
+    update_ordered = { "update": True }
+
+    # TESTING
+    if data.id == "-2":
+        return jsonify(update_ordered)
+
     return jsonify(no_update)
 
 if __name__ == '__main__':

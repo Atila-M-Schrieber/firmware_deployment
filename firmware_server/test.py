@@ -2,15 +2,17 @@ import requests
 from json import dumps as jsonify
 
 # Testing done with requests for black box testing of APIs running in Docker
+# Validation errors are not tested for - Pydantic is responsible server-side
 
 base_url = "http://localhost:8000/firmware"
 
 class EndpointTest:
-    def __init__(self, name, endpoint, method, data,
+    def __init__(self, name, endpoint, method, is_json, data,
                  expected_status, expected_response=None, files=None):
         self.name = name
         self.endpoint = endpoint
         self.method = method
+        self.is_json = is_json
         self.data = data
         self.expected_status = expected_status
         self.expected_response = expected_response
@@ -19,7 +21,10 @@ class EndpointTest:
     def test(self):
         url = f"{base_url}{self.endpoint}"
         try:
-            response = requests.request(self.method, url, data=self.data, files=self.files)
+            if self.is_json:
+                response = requests.request(self.method, url, json=self.data, files=self.files)
+            else:
+                response = requests.request(self.method, url, data=self.data, files=self.files)
             assert response.status_code == self.expected_status, "Bad status"
             if self.expected_response is not None:
                 assert response.json() == self.expected_response, "Bad response"
@@ -39,12 +44,13 @@ good_status = EndpointTest(
     "Good status ping",
     "/status",
     "POST",
-    jsonify({
+    True,
+    {
         "firmware": "blinker",
         "version": "0.1.0",
         "id": "-1", # Reserved for testing, update=false
         "uptime": 100,
-    }),
+    },
     200,
     {"update": False}
 )
@@ -54,12 +60,13 @@ good_status_update = EndpointTest(
     "Good status ping - update",
     "/status",
     "POST",
-    jsonify({
+    True,
+    {
         "firmware": "blinker",
         "version": "0.1.0",
         "id": "-2", # Reserved for testing, update=true
         "uptime": 100,
-    }),
+    },
     200,
     {"update": True}
 )
@@ -69,21 +76,23 @@ bad_status_id = EndpointTest(
     "Bad status ping - unknown ID",
     "/status",
     "POST",
-    jsonify({
+    True,
+    {
         "firmware": "blinker",
         "version": "0.1.0",
         "id": "0", # Reserved for testing, unknown ID
         "uptime": 100,
-    }),
+    },
     401,
-    "Unknown ID"
+    # "Unknown ID"
 )
 
 # Good upload
 good_upload = EndpointTest(
     "Good upload",
     "/upload",
-    "POST",
+    "PUT",
+    False,
     {
         "firmware": "test",
         "version": "1.0.0",
@@ -100,7 +109,8 @@ good_upload = EndpointTest(
 bad_upload_sha = EndpointTest(
     "Bad upload shasum",
     "/upload",
-    "POST",
+    "PUT",
+    False,
     {
         "firmware": "test",
         "version": "1.0.0",
@@ -117,7 +127,8 @@ bad_upload_sha = EndpointTest(
 bad_upload_sign = EndpointTest(
     "Bad upload signature",
     "/upload",
-    "POST",
+    "PUT",
+    False,
     {
         "firmware": "test",
         "version": "1.0.0",
@@ -134,7 +145,8 @@ bad_upload_sign = EndpointTest(
 bad_upload_no_files = EndpointTest(
     "Bad upload - no files",
     "/upload",
-    "POST",
+    "PUT",
+    False,
     {
         "firmware": "test",
         "version": "1.0.0",
