@@ -35,40 +35,46 @@ state["known_test_ids"] =  os.environ["KNOWN_TEST_IDS"].split(':')
 class Status(BaseModel):
     firmware: str
     version: str
-    id: str
+    board_id: str
     uptime: int
 
 @app.route('/firmware/status', methods=['POST'])
 def status():
-    data = request.get_json()
-    if data == None:
+    status = request.get_json()
+    if status == None:
         print("Status data was not JSON")
         return "Request must be JSON", 400
 
     try:
-        data = Status.model_validate(data)
+        status = Status.model_validate(status)
     except ValidationError as e:
         print("Status data is invalid")
         return f"JSON format is invalid: {e}", 400
 
-    if not data.id in state["known_ids"] and not data.id in state["known_test_ids"]:
-        print(f"Status received from unknown ID: {data.id}")
-        return f"Unknown ID: {data.id}", 401
+    if not status.board_id in state["known_ids"] and not status.board_id in state["known_test_ids"]:
+        print(f"Status received from unknown ID: {status.board_id}")
+        return f"Unknown ID: {status.board_id}", 401
     
 
-    print(data)
+    print(status)
 
-    no_update = { "update": False }
-    update_ordered = { "update": True }
+    update_ordered = { "update": True, "secret": None }
 
     # TESTING
-    if data.id in state["known_test_ids"]:
+    if status.board_id in state["known_test_ids"]:
         print("Test ID detected. Remember to deal with test ID's before production deployment")
-    if data.id == "-2":
+    if status.board_id == "-2":
         print("Test update order sent")
+        update_ordered["secret"] = "test_secret"
         return jsonify(update_ordered)
 
-    return jsonify(no_update)
+    # Check for update order
+    if status.board_id in state["orders"]:
+        update_ordered["secret"] = state["orders"][status.board_id].secret
+        print(f"Update order detected for board '{status.board_id}'")
+        return jsonify(update_ordered)
+
+    return jsonify({})
 
 
 # Firmware upload - client API

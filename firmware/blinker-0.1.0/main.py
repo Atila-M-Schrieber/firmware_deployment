@@ -23,6 +23,7 @@ counter = 0
 while wlan.status() < 3:
     if counter == 0:
         print("Connection not yet established", end='')
+        counter += 1
     else:
         print('.', end='')
     time.sleep(0.2)
@@ -55,7 +56,7 @@ def ping_server(timer):
             json = {
                 "firmware": config.firmware,
                 "version": config.version,
-                "id": secrets.id,
+                "board_id": secrets.board_id,
                 "uptime": time.time() - start_time,
             }
         )

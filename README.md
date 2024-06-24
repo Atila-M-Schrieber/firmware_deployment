@@ -39,7 +39,7 @@ Theoretical usecase:
     - Note: all firmware files must be flat - just .py files, no directories
   - [x] Storing/uploading firmware
     - Note: pgpy not being compatible with EdCSA wasted a lot of time
-  - [ ] Sending/downloading firmware
+  - [x] Sending/downloading firmware
   - [ ] Send install confirmation to server in status message
   - [ ] Managing firmware rollbacks
   - [ ] Serving the web portal and APIs
@@ -48,7 +48,7 @@ Theoretical usecase:
 
 - [ ] **Implement firmware update:**
   - [x] User orders update
-  - [ ] server informs raspi is needed and pushes firmware
+  - [x] server informs raspi that it needs to update
   - [ ] Raspberry Pi:
     - [ ] downloads update
     - [ ] verifies firmware - SHASUM only, not sinature
@@ -67,7 +67,8 @@ Theoretical usecase:
 ### Testing and Validation
 
 - [x] **Test connectivity and basic functionality of Raspberry Pi devices**
-- [ ] **Test firmware server’s management capabilities**
+- [x] **Test firmware server’s management capabilities**
+  - Sometimes very annoying, should have used a proper test suite
 - [ ] **Validate web portal functionality**
 - [ ] **Conduct thorough tests for firmware integrity and rollback**
 - [ ] **Test firmware to make sure it can receive OTA updates**

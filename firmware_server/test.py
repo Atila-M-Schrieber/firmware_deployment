@@ -49,11 +49,11 @@ good_status = EndpointTest(
     {
         "firmware": "blinker",
         "version": "0.1.0",
-        "id": "-1", # Reserved for testing, update=false
+        "board_id": "-1", # Reserved for testing, update=false
         "uptime": 100,
     },
     200,
-    {"update": False}
+    {}
 )
 
 # Example good status request with update
@@ -65,11 +65,11 @@ good_status_update = EndpointTest(
     {
         "firmware": "blinker",
         "version": "0.1.0",
-        "id": "-2", # Reserved for testing, update=true
+        "board_id": "-2", # Reserved for testing, update=true
         "uptime": 100,
     },
     200,
-    {"update": True}
+    {"update": True, "secret": "test_secret"}
 )
 
 # Example bad request
@@ -81,7 +81,7 @@ bad_status_id = EndpointTest(
     {
         "firmware": "blinker",
         "version": "0.1.0",
-        "id": "0", # Reserved for testing, unknown ID
+        "board_id": "0", # Reserved for testing, unknown ID
         "uptime": 100,
     },
     401,
@@ -305,6 +305,55 @@ bad_update_order_sign = EndpointTest(
     }
 )
 
+
+# Good update request from board
+good_update_request = EndpointTest(
+    "Good update request",
+    f"/update/-2",
+    "GET",
+    True,
+    {
+        "firmware": "test",
+        "version": "1.0.0",
+        "board_id": "-2",
+        "secret": "test_secret"
+    },
+    200,
+    None,
+)
+
+# Bad update request - known ID but no update order
+bad_update_request_id = EndpointTest(
+    "Bad u. req. - known ID - no u. order",
+    f"/update/-1",
+    "GET",
+    True,
+    {
+        "firmware": "test",
+        "version": "1.0.0",
+        "board_id": "-1",
+        "secret": "test_secret"
+    },
+    406,
+    None, # Known ID, but no update ordered
+)
+
+# Bad update request - bad secret
+bad_update_request_secret = EndpointTest(
+    "Bad u. req. - u. order but bad secret",
+    f"/update/-2",
+    "GET",
+    True,
+    {
+        "firmware": "test",
+        "version": "1.0.0",
+        "board_id": "-2",
+        "secret": "bad_test_secret"
+    },
+    403,
+    None, # Known ID, update ordered, but bad secet
+)
+
 tests = [
     good_status,
     good_status_update,
@@ -320,8 +369,9 @@ tests = [
     bad_update_order_no_version,
     bad_update_order_unknown_id,
     bad_update_order_sign,
-    # good_update_request,
-    # bad_update_request_id,
+    good_update_request,
+    bad_update_request_id,
+    bad_update_request_secret,
 ]
 
 for test in tests:

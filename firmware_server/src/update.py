@@ -1,9 +1,11 @@
 from typing import Optional
-from flask import Flask, request, jsonify
+from flask import Flask, json, request, send_file
 from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 from datetime import datetime, timedelta
 import time
 from threading import Event, Thread
+import io
+import zipfile
 import os
 import pgpy
 import hashlib
@@ -62,12 +64,11 @@ class CleanupThread():
 
 def add_order(order: UpdateOrder, overwrite=False):
     cleanup_event = Event()
-    print(order)
     thread = CleanupThread(order, cleanup_event)
 
     if order.board_id in state["orders"] and not overwrite:
         raise Exception(f"Update Order already exists for '{order.board_id}'!\nUse PUT to overwrite.")
-    else:
+    elif overwrite:
         # Shut down the previous thread before starting this one to avoid races
         # This currently acts the same as order_complete
         state["cleanup_events"][order.board_id].set()
@@ -161,10 +162,71 @@ def order(id):
 
     return secret
 
+def calculate_shasum(file_path):
+    sha = hashlib.sha256()
+    with open(file_path, 'rb') as f:
+        for block in iter(lambda: f.read(4096), b''):
+            sha.update(block)
+    return sha.hexdigest()
+
+class DownloadRequest(BaseModel):
+    firmware: str # misspelled frimware...
+    version: str
+    board_id: str
+    secret: str
+
 def download(id):
+    try:
+        dl_req = DownloadRequest.model_validate(request.json, strict=False)
+    except ValidationError as e:
+        print(f"Badly formatted download request. {str(e)}")
+        return "Bad download request structure", 400
+
+    if id != dl_req.board_id:
+        print("Download URL is incorrect")
+        return "Mismatch in URL id and reported board id", 400
+    
+    # check if ID is known
+    if not dl_req.board_id in state["known_ids"] and not dl_req.board_id in state["known_test_ids"]:
+        print(f"Download request received from unknown ID: {dl_req.board_id}")
+        return f"Unknown ID: {dl_req.board_id}", 401
+
+    # check if id has an update order pending
+    testing = dl_req.board_id in state["known_test_ids"]
+    test_pass = dl_req.board_id == "-2"
+    if dl_req.board_id not in state["orders"] and not test_pass:
+        print(f"Known board '{dl_req.board_id}'")
+        return "You do not have an update order.", 406
+    elif not testing:
+        order = state["orders"][dl_req.board_id]
+
     # check secret
+    if dl_req.secret != (order.secret if not testing else "test_secret"):
+        print(f"Board with update order but bad secret '{dl_req.board_id}'")
+        return "You have an update order, but that's the wrong secet", 403
 
-    # create shasum
+    if testing:
+        return {}
 
-    # send files & shasum
-    return jsonify(id)
+    # load firmware (known to exist, checked in update ordering process)
+    firmware_dir = os.path.join(state["firmware_directory"], f"{order.firmware}-{order.version}")
+    files = os.listdir(firmware_dir)
+
+    shasums = {}
+
+    # construct zip and calculate shasums
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for file in files:
+            path = os.path.join(firmware_dir, file)
+            if os.path.isfile(path):
+                shasums[file] = calculate_shasum(path)
+                zip_file.write(path, arcname=file)
+        # include shasums in zip (can't really send separately unless I want to do multipart)
+        manifest = json.dumps(shasums).encode('utf-8')
+        zip_file.writestr("manifest.json", manifest)
+
+    zip_buffer.seek(0)
+
+    # send zip
+    return send_file(zip_buffer, mimetype='application/zip')
