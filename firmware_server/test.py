@@ -168,6 +168,33 @@ bad_upload_no_files = EndpointTest(
     # "No files found"
 )
 
+# Good firmware info request
+good_firmware_info = EndpointTest(
+    "Good firmware info request",
+    "",
+    "GET",
+    False,
+    {
+        "firmware": "test",
+        "version": "1.0.0",
+    },
+    200,
+    {}
+)
+
+# Good firmware info request
+bad_firmware_info_just_version = EndpointTest(
+    "Bad fwinfo - just version",
+    "",
+    "GET",
+    False,
+    {
+        "version": "1.0.0",
+    },
+    400,
+    # Only version given...
+)
+
 tests = [
     good_status,
     good_status_update,
@@ -176,6 +203,8 @@ tests = [
     bad_upload_sign,
     bad_upload_no_sig,
     bad_upload_no_files,
+    good_firmware_info,
+    bad_firmware_info_just_version,
     # good_update_order,
     # bad_update_order_sign,
     # good_rollback_order,

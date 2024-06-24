@@ -1,4 +1,4 @@
-from flask import request, jsonify
+from flask import request
 from pydantic import BaseModel
 import pgpy
 import os
@@ -14,7 +14,7 @@ def upload(pgp_keys, firmware_directory):
         return "No files in request", 400
     #print(request.files.to_dict())
     try:
-        upload_info = Upload.parse_obj(request.form.to_dict())
+        upload_info = Upload.model_validate(request.form.to_dict())
     except: 
         print("Bad upload request received")
         return "Bad upload request structure", 400
