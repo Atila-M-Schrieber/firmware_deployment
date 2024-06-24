@@ -117,9 +117,8 @@ good_upload = EndpointTest(
     }
 )
 
-# Flips the first char's case after a / in the signature, therefore invalidating it (llm generated)
-bad_sig = '\n'.join([''.join([ch.swapcase() if (i > 0 and line[i-1] == '/')
-                              else ch for i, ch in enumerate(line)]) for line in sig.split('\n')])
+# Sign something else
+bad_sig = str(priv_key.sign(main_text + thing_text + "lol"))
 
 # Bad upload - invalid signature
 bad_upload_sign = EndpointTest(

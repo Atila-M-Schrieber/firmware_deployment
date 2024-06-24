@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify
 from pydantic import BaseModel, ValidationError, model_validator
 from typing import Optional
-from werkzeug.datastructures import MultiDict
 from upload import handle_upload
 import update
 from util import state
+import util
 import pgpy
 import os
 
@@ -63,7 +63,7 @@ def status():
 
     # TESTING
     if data.id in state["known_test_ids"]:
-        print("Test ID detected. Remember to remove test ID's before production deployment")
+        print("Test ID detected. Remember to deal with test ID's before production deployment")
     if data.id == "-2":
         print("Test update order sent")
         return jsonify(update_ordered)
@@ -87,48 +87,13 @@ def download_update(id):
     return update.download(id)
 
 # Get list of available firmwares - client API
-class FirmwareInfoRequest(BaseModel):
-    firmware: Optional[str] = None
-    version: Optional[str] = None
-    
-    @model_validator(mode='after')
-    def no_orphaned_version(self):
-        if self.version and not self.firmware:
-            raise ValueError("Version alone cannot be requested!")
-        return self
-
 @app.route('/firmware', methods=['GET'])
-def get_available_firmwares():
+def get_available_firmware():
     try:
-        req = FirmwareInfoRequest.model_validate(request.form.to_dict())
+        req = util.FirmwareInfoRequest.model_validate(request.form.to_dict())
     except ValueError as e:
         return str(e), 400
-
-    # Get all firmware
-    firmware = MultiDict()
-    firmware_paths = list(map(lambda fw: fw.split('-'), os.listdir(state["firmware_directory"])))
-    # Remove the keys directory
-    firmware_paths = filter(lambda pth: pth != ['keys'], firmware_paths)
-    print(firmware_paths)
-    for fw_name, version in firmware_paths:
-        firmware.add(fw_name, version)
-
-    # Filter to requested firmware
-    if req.firmware:
-        firmware_versions = firmware.getlist(req.firmware)
-        if not firmware_versions:
-            return {}
-        # Filter to selected version (either 1 or 0 left)
-        if req.version: 
-            if req.version in firmware_versions:
-                firmware = { req.firmware: req.version }
-            else:
-                return {}
-        else:
-            firmware.clear()
-            firmware.setlist(req.firmware, firmware_versions)
-
-    return jsonify(firmware)
+    return jsonify(util.available_firmware(req))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)

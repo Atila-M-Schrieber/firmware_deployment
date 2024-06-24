@@ -47,7 +47,8 @@ Theoretical usecase:
 ### Update and Rollback
 
 - [ ] **Implement firmware update:**
-  - [ ] User orders update - server informs raspi is needed and pushes firmware
+  - [x] User orders update
+  - [ ] server informs raspi is needed and pushes firmware
   - [ ] Raspberry Pi:
     - [ ] downloads update
     - [ ] verifies firmware - SHASUM only, not sinature
