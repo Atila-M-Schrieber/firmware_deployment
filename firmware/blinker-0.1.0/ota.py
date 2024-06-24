@@ -1,7 +1,5 @@
 # OTA
-import ujson
-import urequests
-import uzlib
+import urequests as requests
 import os
 import ubinascii
 import hashlib
@@ -19,9 +17,18 @@ def sha_cheksum(path):
 
 # Downloads and unzips the firmware
 def download_firmware(firmware, version, board_id, secret):
-    response = urequests.get(os.path.join(firmware_url, 'update', board_id))
+    download_path = f"{firmware_url}/update/{board_id}"
+    print(f"Requesting download from {download_path}...")
+    to_send = {
+        "firmware": firmware,
+        "version": version,
+        "board_id": board_id,
+        "secret": secret,
+    }
+    response = requests.get(download_path, json=to_send)
     if response.status_code != 200:
         raise Exception(f"Server responded with: {response.status_code}")
+    print("Starting download...")
 
     with open('firmware.zip', 'wb') as f:
         f.write(response.content)

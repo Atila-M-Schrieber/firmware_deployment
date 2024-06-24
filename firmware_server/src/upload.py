@@ -40,7 +40,9 @@ def handle_upload():
     # concatenate firmware as "cat /firmware_files/as/a/directory/*" would
     def decode(name):
         file = firmware_files[name]
-        return file.read().decode('utf-8')
+        file_contents =  file.read().decode('utf-8')
+        file.seek(0) # get back to the start
+        return file_contents
 
     cat_files = ''.join(map(decode, sorted_filenames))
 
@@ -65,6 +67,7 @@ def handle_upload():
                 "please submit a DELETE request, or a new version!", 409
                 # NOTE the DELETE is not implemented, but would be easy - signed request
 
+    # TODO figure out why this doesn't work - probably because it's been decoded already?
     for name, file in firmware_files.items():
         file.save(os.path.join(firmware_save_dir, name))
 

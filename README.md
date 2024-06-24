@@ -50,7 +50,7 @@ Theoretical usecase:
   - [x] User orders update
   - [x] server informs raspi that it needs to update
   - [ ] Raspberry Pi:
-    - [ ] downloads update
+    - [x] downloads update
     - [ ] verifies firmware - SHASUM only, not sinature
     - [ ] installs firmware
     - [ ] reboots with new firmware
