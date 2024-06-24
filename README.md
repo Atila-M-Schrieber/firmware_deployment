@@ -8,8 +8,9 @@
 - [x] **Set up Raspberry Pi with initial (non-OTA) firmware that reports status**
 - [ ] **Write (server) software to handle:**
   - [x] Receiving raspi statuses
-  - [ ] Script to sign, send files to server
-  - [ ] Storing/uploading firmware
+  - [x] Script to sign, send files to server
+    - Note: all firmware files must be flat - just .py files, no directories
+  - [x] Storing/uploading firmware
     - Note: pgpy not being compatible with EdCSA wasted a lot of time
   - [ ] Sending firmware
   - [ ] Managing firmware rollbacks
@@ -18,10 +19,10 @@
 ### Update and Rollback
 
 - [ ] **Implement firmware update:**
-  - [ ] Server detects that update is needed and pushes firmware
+  - [ ] User orders update - server informs raspi is needed and pushes firmware
   - [ ] Raspberry Pi:
     - [ ] downloads update
-    - [ ] verifies firmware
+    - [ ] verifies firmware - SHASUM only, not sinature
     - [ ] installs firmware
     - [ ] reboots with new firmware
 - [ ] **Implement rollback**

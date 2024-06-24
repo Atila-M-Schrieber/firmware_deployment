@@ -8,7 +8,7 @@ class Upload(BaseModel):
     version: str
 
 # Input is expected as form data, as this will probably be done through a webui
-def upload(pgp_keys):
+def upload(pgp_keys, firmware_directory):
     if not request.files:
         print("Upload request with no files received")
         return "No files in request", 400
@@ -23,9 +23,13 @@ def upload(pgp_keys):
 
     firmware_files = {}
 
+    # Sort incoming files
     for _filename, file_contents in request.files.items(multi=True):
         if _filename == 'file':
-            filename = file_contents.filename
+            if file_contents.filename:
+                filename = file_contents.filename
+            else:
+                return "Unnamed file!", 400
         else:
             filename = _filename
         if filename in ["sig.pgp", "sig.asc"]:
@@ -33,10 +37,12 @@ def upload(pgp_keys):
             sig_blob = file_contents.stream.read()#.decode('utf-8')
             signature = pgpy.PGPSignature.from_blob(sig_blob)
         else:
+            # duplicates shouldn't happen, assuming no files in directories
             firmware_files[filename] = file_contents
             if filename.split('.')[-1] != "py":
                 print("Warning, non-python file sent in firmware upload!")
 
+    # Make sure nothing's missing
     if not signature:
         print("Upload requst with no signature received")
         return "No signature file found!", 422
@@ -69,4 +75,23 @@ def upload(pgp_keys):
         print("Bad signature!")
         return "Invalid or unknown signature", 401
 
-    return ""
+    # Skip saving testing files
+    if upload_info.firmware == "test":
+        return "Test detected, aborting save. Good (bug) hunting!"
+
+    firmware_save_dir = os.path.join(firmware_directory,
+                                     f"{upload_info.firmware}-{upload_info.version}")
+    try:
+        os.mkdir(firmware_save_dir)
+    except FileExistsError:
+        print("Uploaded firmware overwrite conflict")
+        return f"This firmware version ({upload_info.version}) already exists,"\
+                "please submit a DELETE request, or a new version!", 409
+                # NOTE the DELETE is not implemented, but would be easy - signed request
+
+    for name, file in firmware_files.items():
+        file.save(os.path.join(firmware_save_dir, name))
+
+    print(os.listdir(firmware_save_dir))
+
+    return "Firmware uploaded successfully"

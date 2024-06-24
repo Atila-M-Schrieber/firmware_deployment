@@ -42,8 +42,17 @@ if [[ ! -d "$DIRECTORY" ]]; then
     exit 1
 fi
 
-# Sign the firmware files
-cat "$DIRECTORY"/* | gpg -u "$USER" --output sig.pgp --detach-sig
+# Check for empty files
+empty_files=$(find "$DIRECTORY" -type f -empty)
+if [[ -n "$empty_files" ]]; then
+    echo "The following files are empty:"
+    echo "$empty_files"
+	echo "Empty files are not allowed"
+    exit 1
+fi
+
+# Sign the firmware files - exclude secrets
+cat $(find "$DIRECTORY" -type f ! -name "secrets.py" | sort) | gpg -u "$USER" --output sig.pgp --detach-sig
 if [[ $? -ne 0 ]]; then
     echo "Something went wrong with gpg!"
     exit 1
@@ -51,7 +60,11 @@ fi
 
 # Send the files
 curl -X PUT "$URL/upload" -F "firmware=$FIRMWARE" -F "version=$VERSION"\
-	$(for file in "$DIRECTORY"/*; do echo "-F file=@$file"; done | tr '\n' ' ')\
+	$(for file in "$DIRECTORY"/*; do
+		if [[ $(basename "$file") != "secrets.py" ]]; then
+             echo -F "file=@$file"
+		fi
+	done | tr '\n' ' ')\
 	-F "file=@sig.pgp"
 
 echo
@@ -64,4 +77,4 @@ fi
 
 rm sig.pgp
 
-echo "Uploaded successfully"
+echo "Upload sent successfully"

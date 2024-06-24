@@ -64,7 +64,7 @@ def status():
 # Firmware upload API
 @app.route('/firmware/upload', methods=['PUT'])
 def upload_():
-    return upload(trusted_firmware_signers)
+    return upload(trusted_firmware_signers, firmware_directory)
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0', port=8000)
