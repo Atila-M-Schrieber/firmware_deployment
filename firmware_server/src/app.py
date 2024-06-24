@@ -27,7 +27,7 @@ known_ids = os.environ["KNOWN_IDS"].split(':')
 #	return "Hello World!"
 
 
-# Receiving status reports from Pi's
+# Receiving status reports from Pi's - board API
 class Status(BaseModel):
     firmware: str
     version: str
@@ -65,13 +65,17 @@ def status():
     return jsonify(no_update)
 
 
-# Firmware upload API
+# Firmware upload - client API
 @app.route('/firmware/upload', methods=['PUT'])
 def upload_():
     return upload(trusted_firmware_signers, firmware_directory)
 
+# Update order - client API
+@app.route('/firmware/update/<id>', methods=['POST'])
+def update(id):
+    return id
 
-# Get list of available firmwares
+# Get list of available firmwares - client API
 class FirmwareInfoRequest(BaseModel):
     firmware: Optional[str] = None
     version: Optional[str] = None

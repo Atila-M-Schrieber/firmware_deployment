@@ -1,4 +1,5 @@
 import requests
+import pgpy
 import os
 
 # Testing done with requests for black box testing of APIs running in Docker
@@ -87,12 +88,15 @@ bad_status_id = EndpointTest(
     # "Unknown ID"
 )
 
+
 with open("../firmware/test-1.0.0/main.py", 'r') as f:
     main_text = f.read()
 with open("../firmware/test-1.0.0/thing.py", 'r') as f:
     thing_text = f.read()
-with open("../firmware/test_sig.asc", 'r') as f:
-    sig = f.read()
+priv_key, _ = pgpy.PGPKey.from_file("../firmware/private.asc")
+priv_key.unlock('')
+pub_key, _ = pgpy.PGPKey.from_file("../firmware/public.asc")
+sig = str(priv_key.sign(main_text + thing_text))
 
 # Good upload
 good_upload = EndpointTest(
@@ -113,7 +117,7 @@ good_upload = EndpointTest(
     }
 )
 
-# Flips the first char's case after a / in the signature, therefore invalidating it (generated)
+# Flips the first char's case after a / in the signature, therefore invalidating it (llm generated)
 bad_sig = '\n'.join([''.join([ch.swapcase() if (i > 0 and line[i-1] == '/')
                               else ch for i, ch in enumerate(line)]) for line in sig.split('\n')])
 
@@ -168,6 +172,7 @@ bad_upload_no_files = EndpointTest(
     # "No files found"
 )
 
+
 # Good firmware info request
 good_firmware_info = EndpointTest(
     "Good firmware info request",
@@ -182,7 +187,7 @@ good_firmware_info = EndpointTest(
     {}
 )
 
-# Good firmware info request
+# Bad firmware info request - only the version provided, not the name
 bad_firmware_info_just_version = EndpointTest(
     "Bad fwinfo - just version",
     "",
@@ -195,6 +200,111 @@ bad_firmware_info_just_version = EndpointTest(
     # Only version given...
 )
 
+
+order_dict = {
+    "firmware": "test",
+    "version": "1.0.0",
+    "board_id": "test_id"
+}
+# Signature signs fw_name-version-board_id, ie: test-1.0.0-test_id - just like
+# the whole firmware directory, except with the -board_id added as a target
+def gen_order_sig(bad_fw=None, bad_ver=None, bad_id=None, bad_sig=None):
+    o_d = order_dict.copy()
+    if bad_fw:
+        o_d['firmware'] = bad_fw
+    if bad_ver:
+        o_d['version'] = bad_ver
+    if bad_id:
+        o_d['board_id'] = bad_id
+    return str(priv_key.sign(
+        f"{o_d['firmware']}-{o_d['version']}-{o_d['board_id']}{bad_sig}" # adding bad_sig in text
+    ))
+
+# Good update order
+good_update_order = EndpointTest(
+    "Good update order",
+    f"/update/{order_dict['board_id']}",
+    "POST",
+    False,
+    {
+        "firmware": "test",
+        "version": "1.0.0",
+    },
+    200,
+    None,
+    {
+        'sig.asc': gen_order_sig()
+    }
+)
+
+# Bad update order - nonexistent firmware
+bad_update_order_no_firmware = EndpointTest(
+    "Bad update order - no such firmware",
+    f"/update/{order_dict['board_id']}",
+    "POST",
+    False,
+    {
+        "firmware": "bad_test",
+        "version": "1.0.0",
+    },
+    404,
+    None, # Firmware 'bad_test' not found
+    {
+        'sig.asc': gen_order_sig(bad_fw="bad_test")
+    }
+)
+
+# Bad update order - nonexistent version
+bad_update_order_no_version = EndpointTest(
+    "Bad update order - no such version",
+    f"/update/{order_dict['board_id']}",
+    "POST",
+    False,
+    {
+        "firmware": "test",
+        "version": "10000.0.0",
+    },
+    404,
+    None, # Firmware 'test-10000.0.0' not found, firmware 'test' versions: ...
+    {
+        'sig.asc': gen_order_sig(bad_ver="10000.0.0")
+    }
+)
+
+# Bad update order - unknown ID
+bad_update_order_unknown_id = EndpointTest(
+    "Bad update order - unknown board ID",
+    f"/update/bad_{order_dict['board_id']}",
+    "POST",
+    False,
+    {
+        "firmware": "test",
+        "version": "1.0.0",
+    },
+    404,
+    None, # Board id unknown / not found
+    {
+        'sig.asc': gen_order_sig(bad_id=f"bad_{order_dict['board_id']}")
+    }
+)
+
+# Bad update order - invalid signature
+bad_update_order_sign = EndpointTest(
+    "Bad update order - invalid signature",
+    f"/update/{order_dict['board_id']}",
+    "POST",
+    False,
+    {
+        "firmware": "test",
+        "version": "1.0.0",
+    },
+    401,
+    None, # Invalid signature
+    {
+        'sig.asc': gen_order_sig(bad_sig="lol")
+    }
+)
+
 tests = [
     good_status,
     good_status_update,
@@ -205,8 +315,11 @@ tests = [
     bad_upload_no_files,
     good_firmware_info,
     bad_firmware_info_just_version,
-    # good_update_order,
-    # bad_update_order_sign,
+    good_update_order,
+    bad_update_order_no_firmware,
+    bad_update_order_no_version,
+    bad_update_order_unknown_id,
+    bad_update_order_sign,
     # good_rollback_order,
     # bad_rollback_order_sign,
     # good_update_request,
