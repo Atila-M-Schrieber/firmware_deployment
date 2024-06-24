@@ -198,7 +198,7 @@ def download(id):
         print(f"Known board '{dl_req.board_id}'")
         return "You do not have an update order.", 406
     elif not testing:
-        order = state["orders"][dl_req.board_id]
+        order = state["orders"][dl_req.board_id] # Should have used a real test suite
 
     # check secret
     if dl_req.secret != (order.secret if not testing else "test_secret"):
@@ -207,6 +207,11 @@ def download(id):
 
     if testing:
         return {}
+
+    # check if the board already has that version installed
+    if dl_req.firmware == order.firmware and dl_req.version == order.version:
+        print(f"This version ('{state["firmware_directory"]}') is already installed on the board")
+        return f"This version is already installed!", 304
 
     # load firmware (known to exist, checked in update ordering process)
     firmware_dir = os.path.join(state["firmware_directory"], f"{order.firmware}-{order.version}")
