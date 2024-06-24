@@ -1,12 +1,14 @@
 from flask import Flask, request, jsonify
-from pydantic import BaseModel, ValidationError, field_validator, model_validator, root_validator
+from pydantic import BaseModel, ValidationError, model_validator
 from typing import Optional
 from werkzeug.datastructures import MultiDict
-from upload import upload
+from upload import handle_upload
+import update
 import pgpy
 import os
 
 app = Flask(__name__)
+app.secret_key = 'Hello NSA!' # to be able to use session data
 
 # Defined in the Dockerfile
 firmware_directory = os.environ["FIRMWARE_DIRECTORY"]
@@ -20,6 +22,7 @@ trusted_firmware_signers = {
 }
 
 known_ids = os.environ["KNOWN_IDS"].split(':')
+known_test_ids =  os.environ["KNOWN_TEST_IDS"].split(':')
 
 # Placeholder for webui
 #@app.route('/firmware')
@@ -47,7 +50,7 @@ def status():
         print("Status data is invalid")
         return f"JSON format is invalid: {e}", 400
 
-    if not data.id in known_ids:
+    if not data.id in known_ids or not data.id in known_test_ids:
         print(f"Status received from unknown ID: {data.id}")
         return f"Unknown ID: {data.id}", 401
     
@@ -58,6 +61,8 @@ def status():
     update_ordered = { "update": True }
 
     # TESTING
+    if data.id in known_test_ids:
+        print("Test ID detected. Remember to remove test ID's before production deployment")
     if data.id == "-2":
         print("Test update order sent")
         return jsonify(update_ordered)
@@ -67,13 +72,18 @@ def status():
 
 # Firmware upload - client API
 @app.route('/firmware/upload', methods=['PUT'])
-def upload_():
-    return upload(trusted_firmware_signers, firmware_directory)
+def upload():
+    return handle_upload(trusted_firmware_signers, firmware_directory)
 
 # Update order - client API
 @app.route('/firmware/update/<id>', methods=['POST'])
-def update(id):
-    return id
+def order_update(id):
+    update.order(id)
+
+# Firmware update download request - board API
+@app.route('/firmware/update/<id>', methods=['GET'])
+def download_update(id):
+    update.download(id)
 
 # Get list of available firmwares - client API
 class FirmwareInfoRequest(BaseModel):

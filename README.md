@@ -24,6 +24,9 @@ Theoretical usecase:
 - Rollbacks are handled in the exact same way as updates.
 - Ideally this is managed through a fancy WebUI - I will make a basic one.
 
+- Client APIs are form-formatted for the sake of the WebUI
+- Board APIs are JSON-formatted
+
 ## Roadmap
 
 ### Firmware Server

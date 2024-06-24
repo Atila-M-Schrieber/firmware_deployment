@@ -8,7 +8,7 @@ class Upload(BaseModel):
     version: str
 
 # Input is expected as form data, as this will probably be done through a webui
-def upload(pgp_keys, firmware_directory):
+def handle_upload(pgp_keys, firmware_directory):
     if not request.files:
         print("Upload request with no files received")
         return "No files in request", 400
