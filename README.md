@@ -39,7 +39,8 @@ Theoretical usecase:
     - Note: all firmware files must be flat - just .py files, no directories
   - [x] Storing/uploading firmware
     - Note: pgpy not being compatible with EdCSA wasted a lot of time
-  - [ ] Sending firmware
+  - [ ] Sending/downloading firmware
+  - [ ] Send install confirmation to server in status message
   - [ ] Managing firmware rollbacks
   - [ ] Serving the web portal and APIs
 

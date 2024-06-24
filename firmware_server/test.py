@@ -38,7 +38,7 @@ class EndpointTest:
             result = "failed - error"
             error = str(e)
         
-        return f"{self.name:<30} ... {result:<15}" + ("" if not error else f" - {error}")
+        return f"{self.name:<35} ... {result:<15}" + ("" if not error else f" - {error}")
 
 # Example good status request
 good_status = EndpointTest(
@@ -217,7 +217,8 @@ def gen_order_sig(bad_fw=None, bad_ver=None, bad_id=None, bad_sig=None):
     if bad_id:
         o_d['board_id'] = bad_id
     return str(priv_key.sign(
-        f"{o_d['firmware']}-{o_d['version']}-{o_d['board_id']}{bad_sig}" # adding bad_sig in text
+        # adding bad_sig in text - not signing the right text
+        f"{o_d['firmware']}-{o_d['version']}-{o_d['board_id']}{bad_sig if bad_sig else ""}"
     ))
 
 # Good update order
@@ -239,7 +240,7 @@ good_update_order = EndpointTest(
 
 # Bad update order - nonexistent firmware
 bad_update_order_no_firmware = EndpointTest(
-    "Bad update order - no such firmware",
+    "Bad u. order - no such firmware",
     f"/update/{order_dict['board_id']}",
     "POST",
     False,
@@ -256,7 +257,7 @@ bad_update_order_no_firmware = EndpointTest(
 
 # Bad update order - nonexistent version
 bad_update_order_no_version = EndpointTest(
-    "Bad update order - no such version",
+    "Bad u. order - no such version",
     f"/update/{order_dict['board_id']}",
     "POST",
     False,
@@ -273,7 +274,7 @@ bad_update_order_no_version = EndpointTest(
 
 # Bad update order - unknown ID
 bad_update_order_unknown_id = EndpointTest(
-    "Bad update order - unknown board ID",
+    "Bad u. order - unknown board ID",
     f"/update/bad_{order_dict['board_id']}",
     "POST",
     False,
@@ -290,7 +291,7 @@ bad_update_order_unknown_id = EndpointTest(
 
 # Bad update order - invalid signature
 bad_update_order_sign = EndpointTest(
-    "Bad update order - invalid signature",
+    "Bad u. order - invalid signature",
     f"/update/{order_dict['board_id']}",
     "POST",
     False,

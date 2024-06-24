@@ -4,25 +4,26 @@ from typing import Optional
 from werkzeug.datastructures import MultiDict
 from upload import handle_upload
 import update
+from util import state
 import pgpy
 import os
 
 app = Flask(__name__)
-app.secret_key = 'Hello NSA!' # to be able to use session data
 
 # Defined in the Dockerfile
-firmware_directory = os.environ["FIRMWARE_DIRECTORY"]
+state["firmware_directory"] = os.environ["FIRMWARE_DIRECTORY"]
 # In lieu of a database for this simple example
-key_path = os.path.join(firmware_directory, 'keys', 'public.asc')
+key_path = os.path.join(state["firmware_directory"], 'keys', 'public.asc')
 with open(key_path, 'r') as f:
     key_block = f.read()
 example_key, _ = pgpy.PGPKey.from_blob(key_block)
-trusted_firmware_signers = {
+state["trusted_firmware_signers"] = {
     "John Doe": example_key # ignore the fact that the name is included in the pubkey 
 }
+print(state["trusted_firmware_signers"])
 
-known_ids = os.environ["KNOWN_IDS"].split(':')
-known_test_ids =  os.environ["KNOWN_TEST_IDS"].split(':')
+state["known_ids"] = os.environ["KNOWN_IDS"].split(':')
+state["known_test_ids"] =  os.environ["KNOWN_TEST_IDS"].split(':')
 
 # Placeholder for webui
 #@app.route('/firmware')
@@ -50,7 +51,7 @@ def status():
         print("Status data is invalid")
         return f"JSON format is invalid: {e}", 400
 
-    if not data.id in known_ids or not data.id in known_test_ids:
+    if not data.id in state["known_ids"] and not data.id in state["known_test_ids"]:
         print(f"Status received from unknown ID: {data.id}")
         return f"Unknown ID: {data.id}", 401
     
@@ -61,7 +62,7 @@ def status():
     update_ordered = { "update": True }
 
     # TESTING
-    if data.id in known_test_ids:
+    if data.id in state["known_test_ids"]:
         print("Test ID detected. Remember to remove test ID's before production deployment")
     if data.id == "-2":
         print("Test update order sent")
@@ -73,17 +74,17 @@ def status():
 # Firmware upload - client API
 @app.route('/firmware/upload', methods=['PUT'])
 def upload():
-    return handle_upload(trusted_firmware_signers, firmware_directory)
+    return handle_upload()
 
 # Update order - client API
-@app.route('/firmware/update/<id>', methods=['POST'])
+@app.route('/firmware/update/<id>', methods=['POST', 'PUT']) # this was 'POST, PUT' for too long...
 def order_update(id):
-    update.order(id)
+    return update.order(id)
 
 # Firmware update download request - board API
 @app.route('/firmware/update/<id>', methods=['GET'])
 def download_update(id):
-    update.download(id)
+    return update.download(id)
 
 # Get list of available firmwares - client API
 class FirmwareInfoRequest(BaseModel):
@@ -105,7 +106,7 @@ def get_available_firmwares():
 
     # Get all firmware
     firmware = MultiDict()
-    firmware_paths = list(map(lambda fw: fw.split('-'), os.listdir(firmware_directory)))
+    firmware_paths = list(map(lambda fw: fw.split('-'), os.listdir(state["firmware_directory"])))
     # Remove the keys directory
     firmware_paths = filter(lambda pth: pth != ['keys'], firmware_paths)
     print(firmware_paths)
@@ -130,4 +131,4 @@ def get_available_firmwares():
     return jsonify(firmware)
 
 if __name__ == '__main__':
-	app.run(host='0.0.0.0', port=8000)
+    app.run(host='0.0.0.0', port=8000)

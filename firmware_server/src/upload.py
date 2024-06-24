@@ -2,13 +2,15 @@ from flask import request
 from pydantic import BaseModel
 import pgpy
 import os
+import util
+from util import state
 
 class Upload(BaseModel):
     firmware: str
     version: str
 
 # Input is expected as form data, as this will probably be done through a webui
-def handle_upload(pgp_keys, firmware_directory):
+def handle_upload():
     if not request.files:
         print("Upload request with no files received")
         return "No files in request", 400
@@ -19,28 +21,11 @@ def handle_upload(pgp_keys, firmware_directory):
         print("Bad upload request received")
         return "Bad upload request structure", 400
 
-    signature = None
-
-    firmware_files = {}
-
     # Sort incoming files
-    for _filename, file_contents in request.files.items(multi=True):
-        if _filename == 'file':
-            if file_contents.filename:
-                filename = file_contents.filename
-            else:
-                return "Unnamed file!", 400
-        else:
-            filename = _filename
-        if filename in ["sig.pgp", "sig.asc"]:
-            file_contents.seek(0)
-            sig_blob = file_contents.stream.read()#.decode('utf-8')
-            signature = pgpy.PGPSignature.from_blob(sig_blob)
-        else:
-            # duplicates shouldn't happen, assuming no files in directories
-            firmware_files[filename] = file_contents
-            if filename.split('.')[-1] != "py":
-                print("Warning, non-python file sent in firmware upload!")
+    try:
+        signature, firmware_files = util.sort_files(['py'])
+    except Exception as e:
+        return e.args
 
     # Make sure nothing's missing
     if not signature:
@@ -59,17 +44,8 @@ def handle_upload(pgp_keys, firmware_directory):
 
     cat_files = ''.join(map(decode, sorted_filenames))
 
-    print(cat_files)
-
     # Verify signature
-
-    firmware_signer = None
-    for signer, key in pgp_keys.items():
-        verification = key.verify(cat_files, signature)
-        if verification:
-            print(f"Firmware signed by: {signer}")
-            firmware_signer = signer
-            break
+    firmware_signer = util.find_signer(signature, cat_files)
 
     if not firmware_signer:
         print("Bad signature!")
@@ -79,7 +55,7 @@ def handle_upload(pgp_keys, firmware_directory):
     if upload_info.firmware == "test":
         return "Test detected, aborting save. Good (bug) hunting!"
 
-    firmware_save_dir = os.path.join(firmware_directory,
+    firmware_save_dir = os.path.join(state["firmware_directory"],
                                      f"{upload_info.firmware}-{upload_info.version}")
     try:
         os.mkdir(firmware_save_dir)
