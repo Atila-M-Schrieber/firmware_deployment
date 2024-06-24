@@ -320,8 +320,6 @@ tests = [
     bad_update_order_no_version,
     bad_update_order_unknown_id,
     bad_update_order_sign,
-    # good_rollback_order,
-    # bad_rollback_order_sign,
     # good_update_request,
     # bad_update_request_id,
 ]

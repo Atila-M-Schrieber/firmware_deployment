@@ -1,5 +1,29 @@
 # Remote firmware deployment pipeline for Raspberry Pi Pico W
 
+Theoretical usecase:
+- Board (Pi Pico W in this case) is flashed with MicroPython, and the initial firmware is loaded.
+  - A secrets.py file must also be configured for each Board
+    - ID, wlan ssid and password
+- Board connects to network and runs its firmware (in this case just blinking)
+  - Board regularly pings firmware server with status
+  - If there is an update ready to download for the device,
+    the server indicates this in the response
+- Client can upload new firmware to the server
+  - Uploaded firmware must be sent alongside a PGP signature
+  - Signature is checked against list of trusted public keys
+  - Collisions are prevented
+  - (Integrating something like Git would be a much better choice in production)
+- When the Client wants to update the firmware on a Board, the Board receives a 'time to update'
+  response on its next status ping.
+  - Client a POST API call to `/firmware/update/<board_id>`,
+    with the firmware and version to update to
+    - Request contains signature for `firmware_name-version-board_id` for authentication
+  - Once the board receives the update command, it sends a GET request to the same endpoint
+    - Firmware is downloaded, checked against shasum (no key verification for the Board)
+    - Board installs the update, reboots into it
+- Rollbacks are handled in the exact same way as updates.
+- Ideally this is managed through a fancy WebUI - I will make a basic one.
+
 ## Roadmap
 
 ### Firmware Server
