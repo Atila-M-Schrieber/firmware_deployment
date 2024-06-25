@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import time
 from threading import Event, Thread
 import io
-import zipfile
+import tarfile
 import os
 import pgpy
 import hashlib
@@ -219,19 +219,21 @@ def download(id):
 
     shasums = {}
 
-    # construct zip and calculate shasums
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+    # construct tar archive and calculate shasums
+    tar_bytes = io.BytesIO()
+    with tarfile.open(fileobj=tar_bytes, mode='w') as tar:
         for file in files:
             path = os.path.join(firmware_dir, file)
             if os.path.isfile(path):
                 shasums[file] = calculate_shasum(path)
-                zip_file.write(path, arcname=file)
-        # include shasums in zip (can't really send separately unless I want to do multipart)
+                tar.add(path, arcname=file)
+        # include shasums in archive (can't really send separately unless I want to do multipart)
         manifest = json.dumps(shasums).encode('utf-8')
-        zip_file.writestr("manifest.json", manifest)
+        manifest_info = tarfile.TarInfo(name="manifest.json")
+        manifest_info.size = len(manifest)
+        tar.addfile(manifest_info, io.BytesIO(manifest))
 
-    zip_buffer.seek(0)
+    tar_bytes.seek(0)
 
-    # send zip
-    return send_file(zip_buffer, mimetype='application/zip')
+    # send archive
+    return send_file(tar_bytes, mimetype='application/tar')
