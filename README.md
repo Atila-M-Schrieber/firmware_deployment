@@ -40,22 +40,25 @@ Theoretical usecase:
   - [x] Storing/uploading firmware
     - Note: pgpy not being compatible with EdCSA wasted a lot of time
   - [x] Sending/downloading firmware
-  - [ ] Send install confirmation to server in status message
-  - [ ] Managing firmware rollbacks
+  - [x] Send install confirmation to server in status message
+  - [x] Managing firmware rollbacks
   - [ ] Serving the web portal and APIs
 
 ### Update and Rollback
 
-- [ ] **Implement firmware update:**
+- [x] **Implement firmware update:**
   - [x] User orders update
   - [x] server informs raspi that it needs to update
-  - [ ] Raspberry Pi:
+  - [x] Raspberry Pi:
     - [x] downloads update
-    - [ ] verifies firmware - SHASUM only, not sinature
-    - [ ] installs firmware
-    - [ ] reboots with new firmware
-- [ ] **Implement rollback**
-  - [ ] Should be same as update
+    - [x] verifies firmware - SHASUM only, not sinature
+      - Something is wrong with both uhashlib and micropython-hashlib
+        implementations of sha256, so the 'backbone' is there,
+        but no exceptions are raised for mismatched cheksums.
+    - [x] installs firmware
+    - [x] reboots with new firmware
+- [x] **Implement rollback**
+  - [x] Should be same as update
 
 ### Web Portal
 
@@ -70,8 +73,7 @@ Theoretical usecase:
 - [x] **Test firmware server’s management capabilities**
   - Sometimes very annoying, should have used a proper test suite
 - [ ] **Validate web portal functionality**
-- [ ] **Conduct thorough tests for firmware integrity and rollback**
-- [ ] **Test firmware to make sure it can receive OTA updates**
+- [x] **Conduct tests for firmware integrity and rollback**
 
 ## Sources
 - OTA updating inspired by https://github.com/kevinmcaleer/ota

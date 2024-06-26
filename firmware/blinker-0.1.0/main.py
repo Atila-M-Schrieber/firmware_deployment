@@ -57,29 +57,29 @@ board_info = {
 }
 
 def ping_server(timer):
-    #try:
-    to_send = board_info.copy()
-    to_send["uptime"] = time.time() - start_time
-    response = requests.post(
-        f"{config.firmware_url}/status",
-        json = to_send
-    ).json()
-    print(response)
+    try:
+        to_send = board_info.copy()
+        to_send["uptime"] = time.time() - start_time
+        response = requests.post(
+            f"{config.firmware_url}/status",
+            json = to_send
+        ).json()
+        print(response)
 
-    # on update: {"update"=True, "secret"="<some secret>"}
-    if "update" in response and response["update"] == True: # asserting true to avoid just truthy
-        download_info = board_info.copy()
-        download_info["secret"] = response["secret"]
-        print("Starting update...")
-        timer.deinit()
-        ota.install_firmware(**download_info) # for now let it crash to show error
-        #try:
-        #    ota.install_firmware(**download_info)
-        #except:
-        #    print("Error occured during update. Trying again.")
-        #    init_ping_server(timer) # Keep trying if install fails
-    #except OSError as e:
-    #    print(f"Ping failed: {e}")
+        # on update: {"update"=True, "secret"="<some secret>"}
+        if "update" in response and response["update"] == True: # asserting true to avoid just truthy
+            download_info = board_info.copy()
+            download_info["secret"] = response["secret"]
+            print("Starting update...")
+            ota.install_firmware(**download_info) # for now let it crash to show error
+            try:
+                ota.install_firmware(**download_info)
+            except ota.DanglingOrderException:
+                print("Update already installed. Re-sending delete request.")
+            except:
+                print("Error occured during update. Trying again.")
+    except OSError as e:
+        print(f"Ping failed: {e}")
 
     # Visually show ping
     led.toggle()
@@ -88,7 +88,6 @@ def ping_server(timer):
     time.sleep(0.05)
     led.toggle()
 
-# Defined so it can be called again in case update fails
 def init_ping_server(timer):
     timer.init(freq=1/config.polling_rate, mode=Timer.PERIODIC, callback=ping_server)
     

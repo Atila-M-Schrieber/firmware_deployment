@@ -2,7 +2,7 @@ from machine import Pin, Timer
 import time
 import network
 import urequests as requests
-import json
+import ujson as json
 
 import secrets
 import config
@@ -63,18 +63,21 @@ def ping_server(timer):
         response = requests.post(
             f"{config.firmware_url}/status",
             json = to_send
-        )
+        ).json()
         print(response)
 
         # on update: {"update"=True, "secret"="<some secret>"}
-        if response["update"]:
+        if "update" in response and response["update"] == True: # asserting true to avoid just truthy
             download_info = board_info.copy()
             download_info["secret"] = response["secret"]
-            timer.deinit()
+            print("Starting update...")
+            ota.install_firmware(**download_info) # for now let it crash to show error
             try:
                 ota.install_firmware(**download_info)
+            except ota.DanglingOrderException:
+                print("Update already installed. Re-sending delete request.")
             except:
-                init_ping_server(timer) # Keep trying if install fails
+                print("Error occured during update. Trying again.")
     except OSError as e:
         print(f"Ping failed: {e}")
 
@@ -85,7 +88,6 @@ def ping_server(timer):
     time.sleep(0.05)
     led.toggle()
 
-# Defined so it can be called again in case update fails
 def init_ping_server(timer):
     timer.init(freq=1/config.polling_rate, mode=Timer.PERIODIC, callback=ping_server)
     

@@ -132,13 +132,14 @@ def order(id):
 
     # check for firmware
     firmware = available_firmware(FirmwareInfoRequest(firmware=order.firmware))
+    print(list(firmware.listvalues())[0])
 
     if not firmware and not (is_test and order.firmware == "test"):
         print(f"No firmware '{order.firmware}' was found.")
         return f"No firmware '{order.firmware}' was found.", 404
 
     # check for version
-    if not order.version in firmware.values() and not (is_test and order.version == "1.0.0"):
+    if not order.version in list(firmware.listvalues())[0] and not (is_test and order.version == "1.0.0"):
         print(f"Bad version: '{order.firmware}-{order.version}' was not found.")
         return f"Bad version: '{order.firmware}-{order.version}' was not found.", 404
 
@@ -166,44 +167,63 @@ def calculate_shasum(file_path):
     sha = hashlib.sha256()
     with open(file_path, 'rb') as f:
         for block in iter(lambda: f.read(4096), b''):
+            print(f"Block (len {len(block)}): {block}")
             sha.update(block)
     return sha.hexdigest()
 
-class DownloadRequest(BaseModel):
+class Respond(Exception):
+    def __init__(self, message, status_code):
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code
+
+    def respond(self):
+        return self.message, self.status_code
+
+class BoardUpdateRequest(BaseModel):
     firmware: str # misspelled frimware...
     version: str
     board_id: str
     secret: str
 
+    def check_request_get_order(self, id, testing, request_type):
+        if id != self.board_id:
+            print(f"{request_type.capitalize()} URL is incorrect")
+            raise Respond("Mismatch in URL id and reported board id", 400)
+        
+        # check if ID is known
+        if not self.board_id in state["known_ids"] and not self.board_id in state["known_test_ids"]:
+            print(f"{request_type.capitalize()} request received from unknown ID: {self.board_id}")
+            raise Respond(f"Unknown ID: {self.board_id}", 401)
+    
+        # check if id has an update order pending
+        test_pass = self.board_id == "-2"
+        if self.board_id not in state["orders"] and not test_pass:
+            print(f"Known board '{self.board_id}'")
+            raise Respond("You do not have an update order.", 406)
+        elif not testing:
+            order = state["orders"][self.board_id] # Should have used a real test suite
+    
+        # check secret
+        if self.secret != (order.secret if not testing else "test_secret"):
+            print(f"Board with update order but bad secret '{self.board_id}'")
+            raise Respond("You have an update order, but that's the wrong secet", 403)
+
+        return order
+
 def download(id):
     try:
-        dl_req = DownloadRequest.model_validate(request.json, strict=False)
+        dl_req = BoardUpdateRequest.model_validate(request.json, strict=False)
     except ValidationError as e:
         print(f"Badly formatted download request. {str(e)}")
         return "Bad download request structure", 400
 
-    if id != dl_req.board_id:
-        print("Download URL is incorrect")
-        return "Mismatch in URL id and reported board id", 400
-    
-    # check if ID is known
-    if not dl_req.board_id in state["known_ids"] and not dl_req.board_id in state["known_test_ids"]:
-        print(f"Download request received from unknown ID: {dl_req.board_id}")
-        return f"Unknown ID: {dl_req.board_id}", 401
-
-    # check if id has an update order pending
     testing = dl_req.board_id in state["known_test_ids"]
-    test_pass = dl_req.board_id == "-2"
-    if dl_req.board_id not in state["orders"] and not test_pass:
-        print(f"Known board '{dl_req.board_id}'")
-        return "You do not have an update order.", 406
-    elif not testing:
-        order = state["orders"][dl_req.board_id] # Should have used a real test suite
 
-    # check secret
-    if dl_req.secret != (order.secret if not testing else "test_secret"):
-        print(f"Board with update order but bad secret '{dl_req.board_id}'")
-        return "You have an update order, but that's the wrong secet", 403
+    try:
+        order = dl_req.check_request_get_order(id, testing, "download")
+    except Respond as r:
+        return r.respond()
 
     if testing:
         return {}
@@ -237,3 +257,19 @@ def download(id):
 
     # send archive
     return send_file(tar_bytes, mimetype='application/tar')
+
+def delete_order(id):
+    try:
+        dl_req = BoardUpdateRequest.model_validate(request.json, strict=False)
+    except ValidationError as e:
+        print(f"Badly formatted order delete request. {str(e)}")
+        return "Bad order delete request structure", 400
+
+    testing = dl_req.board_id in state["known_test_ids"]
+
+    dl_req.check_request_get_order(id, testing, "download")
+    
+    state["cleanup_events"][id].set()
+
+    # check stuff
+    return "Order deleted"

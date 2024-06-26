@@ -92,6 +92,11 @@ def order_update(id):
 def download_update(id):
     return update.download(id)
 
+# Firmware update installation complete (pre-reboot) - board API
+@app.route('/firmware/update/<id>', methods=['DELETE'])
+def update_completion(id):
+    return update.delete_order(id)
+
 # Get list of available firmwares - client API
 @app.route('/firmware', methods=['GET'])
 def get_available_firmware():
