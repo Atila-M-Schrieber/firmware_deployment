@@ -132,24 +132,21 @@ def order(id):
 
     # check for firmware
     firmware = available_firmware(FirmwareInfoRequest(firmware=order.firmware))
-    print(list(firmware.listvalues())[0])
+    print(list(firmware.listvalues()))#[0])
 
     if not firmware and not (is_test and order.firmware == "test"):
         print(f"No firmware '{order.firmware}' was found.")
         return f"No firmware '{order.firmware}' was found.", 404
 
     # check for version
-    if not order.version in list(firmware.listvalues())[0] and not (is_test and order.version == "1.0.0"):
+    if (is_test and order.version != "1.0.0") or\
+            (not is_test and order.version not in list(firmware.listvalues())[0]):
         print(f"Bad version: '{order.firmware}-{order.version}' was not found.")
         return f"Bad version: '{order.firmware}-{order.version}' was not found.", 404
 
     # create secret
     secret = hashlib.md5(bytes(signature)).hexdigest()
     order_dict["secret"] = secret
-
-    # Return good if test
-    #if is_test:
-        #return secret
 
     # create & add_order
     overwrite = request.method == "PUT" # POST doesn't overwrite, PUT does
@@ -201,8 +198,8 @@ class BoardUpdateRequest(BaseModel):
         if self.board_id not in state["orders"] and not test_pass:
             print(f"Known board '{self.board_id}'")
             raise Respond("You do not have an update order.", 406)
-        elif not testing:
-            order = state["orders"][self.board_id] # Should have used a real test suite
+
+        order = state["orders"][self.board_id] # Should have used a real test suite
     
         # check secret
         if self.secret != (order.secret if not testing else "test_secret"):

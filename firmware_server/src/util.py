@@ -66,9 +66,9 @@ class FirmwareInfoRequest(BaseModel):
 # Lists all requested firmware - separated from API call for internal use
 # None, None for all; fw_name, None for all versions of fw_name,
 # and both to check for a specific version
-def available_firmware(req: FirmwareInfoRequest):
+def available_firmware(req: FirmwareInfoRequest) -> MultiDict:
     # Get all firmware
-    firmware = MultiDict()
+    firmware: MultiDict = MultiDict()
     firmware_paths = list(map(lambda fw: fw.split('-'), os.listdir(state["firmware_directory"])))
     # Remove the keys directory
     firmware_paths = filter(lambda pth: pth != ['keys'], firmware_paths)
@@ -79,13 +79,13 @@ def available_firmware(req: FirmwareInfoRequest):
     if req.firmware:
         firmware_versions = firmware.getlist(req.firmware)
         if not firmware_versions:
-            return {}
+            return MultiDict()
         # Filter to selected version (either 1 or 0 left)
         if req.version: 
             if req.version in firmware_versions:
-                firmware = { req.firmware: req.version }
+                firmware = MultiDict({ req.firmware: req.version })
             else:
-                return {}
+                return MultiDict()
         else:
             firmware.clear()
             firmware.setlist(req.firmware, firmware_versions)

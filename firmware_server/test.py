@@ -309,13 +309,13 @@ bad_update_order_sign = EndpointTest(
 # Good update request from board
 good_update_request = EndpointTest(
     "Good update request",
-    f"/update/-2",
+    f"/update/{order_dict["board_id"]}",
     "GET",
     True,
     {
         "firmware": "test",
         "version": "1.0.0",
-        "board_id": "-2",
+        "board_id": f"{order_dict["board_id"]}",
         "secret": "test_secret"
     },
     200,
@@ -341,13 +341,13 @@ bad_update_request_id = EndpointTest(
 # Bad update request - bad secret
 bad_update_request_secret = EndpointTest(
     "Bad u. req. - u. order but bad secret",
-    f"/update/-2",
+    f"/update/{order_dict["board_id"]}",
     "GET",
     True,
     {
         "firmware": "test",
         "version": "1.0.0",
-        "board_id": "-2",
+        "board_id": f"{order_dict["board_id"]}",
         "secret": "bad_test_secret"
     },
     403,
@@ -372,6 +372,8 @@ tests = [
     good_update_request,
     bad_update_request_id,
     bad_update_request_secret,
+    # good_update_success, # same logic as update request, so not testing for id and secret
+    # bad_update_success_no_order, 
 ]
 
 for test in tests:
