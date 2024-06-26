@@ -174,7 +174,7 @@ class Respond(Exception):
         self.message = message
         self.status_code = status_code
 
-    def respond(self):
+    def __call__(self):
         return self.message, self.status_code
 
 class BoardUpdateRequest(BaseModel):
@@ -220,7 +220,7 @@ def download(id):
     try:
         order = dl_req.check_request_get_order(id, testing, "download")
     except Respond as r:
-        return r.respond()
+        return r()
 
     if testing:
         return {}
@@ -264,7 +264,10 @@ def delete_order(id):
 
     testing = dl_req.board_id in state["known_test_ids"]
 
-    dl_req.check_request_get_order(id, testing, "download")
+    try:
+        dl_req.check_request_get_order(id, testing, "download")
+    except Respond as r:
+        return r()
     
     state["cleanup_events"][id].set()
 

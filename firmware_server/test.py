@@ -1,6 +1,7 @@
 import requests
 import pgpy
 import os
+import copy
 
 # Testing done with requests for black box testing of APIs running in Docker
 # Validation errors are not tested for - Pydantic is responsible server-side
@@ -354,6 +355,28 @@ bad_update_request_secret = EndpointTest(
     None, # Known ID, update ordered, but bad secet
 )
 
+
+# Good update success confirmation
+good_update_success = EndpointTest(
+    "Good update success confirmation",
+    f"/update/{order_dict["board_id"]}",
+    "DELETE",
+    True,
+    {
+        "firmware": "test",
+        "version": "1.0.0",
+        "board_id": f"{order_dict["board_id"]}",
+        "secret": "test_secret"
+    },
+    200,
+    None,
+)
+
+# Bad update success confirmation - no order (cancelled in the update success)
+bad_update_success_no_order = copy.deepcopy(good_update_success)
+bad_update_success_no_order.name = "Bad update confirm. - already confirmed"
+bad_update_success_no_order.expected_status = 406
+
 tests = [
     good_status,
     good_status_update,
@@ -372,8 +395,8 @@ tests = [
     good_update_request,
     bad_update_request_id,
     bad_update_request_secret,
-    # good_update_success, # same logic as update request, so not testing for id and secret
-    # bad_update_success_no_order, 
+    good_update_success, # same logic as update request, so not testing for id and secret
+    bad_update_success_no_order, 
 ]
 
 for test in tests:
