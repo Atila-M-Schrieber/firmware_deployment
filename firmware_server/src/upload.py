@@ -1,7 +1,8 @@
+import os
+
 from flask import request
 from pydantic import BaseModel
-import pgpy
-import os
+
 import util
 from util import state
 

@@ -1,16 +1,16 @@
-from typing import Optional
-from flask import Flask, json, request, send_file
-from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
-from datetime import datetime, timedelta
-import time
-from threading import Event, Thread
-import io
-import tarfile
-import os
-import pgpy
 import hashlib
+import io
+import os
+import tarfile
+import time
+from datetime import datetime, timedelta
+from threading import Event, Thread
+
+from flask import json, request, send_file
+from pydantic import BaseModel, ValidationError
+
 import util
-from util import FirmwareInfoRequest, available_firmware, state
+from util import state
 
 time_to_expiry = timedelta(minutes=int(os.environ["UPDATE_EXPIRACY_MINUTES"]))
 
@@ -131,7 +131,7 @@ def order(id):
         print("Test ID detected. Remember to deal with test ID's before production deployment")
 
     # check for firmware
-    firmware = available_firmware(FirmwareInfoRequest(firmware=order.firmware))
+    firmware = util.available_firmware(util.FirmwareInfoRequest(firmware=order.firmware))
     print(list(firmware.listvalues()))#[0])
 
     if not firmware and not (is_test and order.firmware == "test"):

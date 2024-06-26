@@ -1,12 +1,13 @@
+import os
+
 from flask import Flask, request, jsonify
-from pydantic import BaseModel, ValidationError, model_validator
-from typing import Optional
+from pydantic import BaseModel, ValidationError
+import pgpy
+
 from upload import handle_upload
 import update
-from util import state
 import util
-import pgpy
-import os
+from util import state
 
 app = Flask(__name__)
 

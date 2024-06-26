@@ -1,11 +1,11 @@
-from flask import Flask, request, jsonify, session
-from werkzeug.datastructures import MultiDict
-from pgpy import PGPSignature
-from pydantic import BaseModel, ValidationError, model_validator
-from typing import Optional
-import pgpy
-from werkzeug.datastructures import FileStorage
 import os
+from typing import Optional
+
+from flask import request
+from pydantic import BaseModel, model_validator
+from werkzeug.datastructures import FileStorage, MultiDict
+import pgpy
+from pgpy import PGPSignature
 
 # Global state directory with shared data - defined like this so pydantic doesn't get pissed
 state = {
